@@ -31,16 +31,7 @@
 
 #import "UIAlertView_BlockExtensions.h"
 
-#import <objc/runtime.h>
-
-@interface CAlertViewBlockHelper : NSObject <UIAlertViewDelegate>
-@property (readwrite, nonatomic, copy) void (^buttonHandler)(NSInteger buttonIndex);
-@property (readwrite, nonatomic, copy) void (^cancelHandler)(void);
-@end
-
-#pragma mark -
-
-static void *kCAlertViewBlockHelperKey;
+#import "CGenericBlockHelper.h"
 
 @implementation UIAlertView (BlockExtensions)
 
@@ -65,64 +56,35 @@ static void *kCAlertViewBlockHelperKey;
 
 - (void (^)(NSInteger))buttonHandler
     {
-    CAlertViewBlockHelper *theHelper = objc_getAssociatedObject(self, &kCAlertViewBlockHelperKey);
-    return(theHelper.buttonHandler);
+    return(NULL);
     }
 
 - (void)setButtonHandler:(void (^)(NSInteger))buttonHandler
     {
-    CAlertViewBlockHelper *theHelper = objc_getAssociatedObject(self, &kCAlertViewBlockHelperKey);
-    if (theHelper == NULL)
+
+    CGenericBlockHelper *theHelper = [CGenericBlockHelper genericBlockHelperForObject:self ofClass:[UIAlertView class]];
+    buttonHandler = [buttonHandler copy];
+    
+    id theBlock = ^(id _self, UIAlertView *inAlertView, NSInteger index)
         {
-        theHelper = [[CAlertViewBlockHelper alloc] init];
-        objc_setAssociatedObject(self, &kCAlertViewBlockHelperKey, theHelper, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        self.delegate = theHelper;
-        }
-    theHelper.buttonHandler = buttonHandler;
+        NSLog(@"FIRING: %@", buttonHandler);
+        buttonHandler(index);
+        };
+    [theHelper addIMPBlock:theBlock forSelector:@selector(alertView:clickedButtonAtIndex:) andProtocol:@protocol(UIAlertViewDelegate)];
+    self.delegate = theHelper;
+
+    NSLog(@"%d", [theHelper respondsToSelector:@selector(alertView:clickedButtonAtIndex:)]);
+    NSLog(@"%d", [theHelper conformsToProtocol:@protocol(UIAlertViewDelegate)]);
+
     }
 
 - (void (^)(void))cancelHandler
     {
-    CAlertViewBlockHelper *theHelper = objc_getAssociatedObject(self, &kCAlertViewBlockHelperKey);
-    return(theHelper.cancelHandler);
+    return(NULL);
     }
 
 - (void)setCancelHandler:(void (^)(void))cancelHandler
     {
-    CAlertViewBlockHelper *theHelper = objc_getAssociatedObject(self, &kCAlertViewBlockHelperKey);
-    if (theHelper == NULL)
-        {
-        theHelper = [[CAlertViewBlockHelper alloc] init];
-        objc_setAssociatedObject(self, &kCAlertViewBlockHelperKey, theHelper, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        self.delegate = theHelper;
-        }
-    theHelper.cancelHandler = cancelHandler;
     }
 
 @end
-
-#pragma mark -
-
-@implementation CAlertViewBlockHelper
-
-@synthesize buttonHandler;
-@synthesize cancelHandler;
-
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex;
-    {
-    if (self.buttonHandler)
-        {
-        self.buttonHandler(buttonIndex);
-        }
-    }
-
-- (void)alertViewCancel:(UIAlertView *)alertView;
-    {
-    if (self.cancelHandler)
-        {
-        self.cancelHandler();
-        }
-    }
-
-@end
-

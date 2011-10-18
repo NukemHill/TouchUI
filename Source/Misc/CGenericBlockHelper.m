@@ -36,14 +36,14 @@
 static void *kGenericBlockHelper;
 
 @interface CGenericBlockHelper ()
-+ (CGenericBlockHelper *)genericBlockHelperForObject:(id)inObject ofClass:(Class)inClass;
-@property (readwrite, nonatomic, retain) NSMutableDictionary *handlersForSelectors;
-
+@property (readwrite, nonatomic, retain) NSMutableDictionary *handlerForSelectors;
 @end
 
 @implementation CGenericBlockHelper
 
 @synthesize handler;
+
+@synthesize handlerForSelectors;
 
 + (CGenericBlockHelper *)genericBlockHelperForObject:(id)inObject selector:(SEL)inSelector
     {
@@ -88,7 +88,16 @@ static void *kGenericBlockHelper;
     return(theHelper);
     }
 
-- (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector
+- (id)init
+    {
+    if ((self = [super init]) != NULL)
+        {
+        handlerForSelectors = [[NSMutableDictionary alloc] init];
+        }
+    return self;
+    }
+
+- (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector types:(const char *)inTypes;
     {
     if (class_respondsToSelector([self class], inSelector) == YES)
         {
@@ -96,7 +105,7 @@ static void *kGenericBlockHelper;
         }
     
     IMP theIMP = imp_implementationWithBlock((__bridge void *)inIMPBlock);
-    BOOL theResult = class_addMethod([self class], inSelector, theIMP, "v:@");
+    BOOL theResult = class_addMethod([self class], inSelector, theIMP, inTypes);
     NSAssert(theResult == YES, @"Could not add method");
     }
 
@@ -106,23 +115,31 @@ static void *kGenericBlockHelper;
         {
         class_addProtocol([self class], inProtocol);
         }
-    [self addIMPBlock:inIMPBlock forSelector:inSelector];
+        
+    struct objc_method_description theMethodDescription = protocol_getMethodDescription(inProtocol, inSelector, NO, YES);
+    if (theMethodDescription.types == NO)
+        {
+        theMethodDescription = protocol_getMethodDescription(inProtocol, inSelector, YES, YES);
+        NSParameterAssert(theMethodDescription.types);
+        }
+        
+    [self addIMPBlock:inIMPBlock forSelector:inSelector types:theMethodDescription.types];
     }
 
 - (void)addHandler:(void (^)(void))inHandler forSelector:(SEL)inSelector
     {
-    inHandler = [inHandler copy];
+    [self.handlerForSelectors setObject:[inHandler copy] forKey:NSStringFromSelector(inSelector)];
     
     void (^theIMPBlock)(CGenericBlockHelper * _self) = ^(CGenericBlockHelper * _self) {
-        if (inHandler)
+        void (^theHandler)(void) = [_self.handlerForSelectors objectForKey:NSStringFromSelector(inSelector)];
+        if (theHandler)
             {
-            inHandler();
+            theHandler();
             }
         };
 
-    [self addIMPBlock:theIMPBlock forSelector:inSelector];
+    [self addIMPBlock:theIMPBlock forSelector:inSelector types:"v:@"];
     }
-
 
 @end
 

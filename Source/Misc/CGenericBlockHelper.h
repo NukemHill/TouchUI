@@ -40,7 +40,7 @@
 
 + (CGenericBlockHelper *)genericBlockHelperForObject:(id)inObject ofClass:(Class)inClass;
 
-- (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector;
+- (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector types:(const char *)inTypes;
 - (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector andProtocol:(Protocol *)inProtocol;
 
 - (void)addHandler:(void (^)(void))inHandler forSelector:(SEL)inSelector;
