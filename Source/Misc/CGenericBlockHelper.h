@@ -39,6 +39,10 @@
 
 
 + (CGenericBlockHelper *)genericBlockHelperForObject:(id)inObject ofClass:(Class)inClass;
-- (void)addHandler:(id)inHandler forSelector:(SEL)inSelector;
+
+- (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector;
+- (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector andProtocol:(Protocol *)inProtocol;
+
+- (void)addHandler:(void (^)(void))inHandler forSelector:(SEL)inSelector;
 
 @end

@@ -88,25 +88,41 @@ static void *kGenericBlockHelper;
     return(theHelper);
     }
 
-- (id)init
-    {
-    if ((self = [super init]) != NULL)
-        {
-        }
-    return self;
-    }
-
-- (void)addHandler:(id)inHandler forSelector:(SEL)inSelector
+- (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector
     {
     if (class_respondsToSelector([self class], inSelector) == YES)
         {
         return;
         }
-        
-    IMP theIMP = imp_implementationWithBlock((__bridge void *)inHandler);
+    
+    IMP theIMP = imp_implementationWithBlock((__bridge void *)inIMPBlock);
     BOOL theResult = class_addMethod([self class], inSelector, theIMP, "v:@");
     NSAssert(theResult == YES, @"Could not add method");
     }
+
+- (void)addIMPBlock:(id)inIMPBlock forSelector:(SEL)inSelector andProtocol:(Protocol *)inProtocol
+    {
+    if (class_conformsToProtocol([self class], inProtocol) == NO)
+        {
+        class_addProtocol([self class], inProtocol);
+        }
+    [self addIMPBlock:inIMPBlock forSelector:inSelector];
+    }
+
+- (void)addHandler:(void (^)(void))inHandler forSelector:(SEL)inSelector
+    {
+    inHandler = [inHandler copy];
+    
+    void (^theIMPBlock)(CGenericBlockHelper * _self) = ^(CGenericBlockHelper * _self) {
+        if (inHandler)
+            {
+            inHandler();
+            }
+        };
+
+    [self addIMPBlock:theIMPBlock forSelector:inSelector];
+    }
+
 
 @end
 
